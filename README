@@ -1,8 +1,10 @@
+Converters
+
+A place to put useful conversion scripts that run offline in HTML5.
+
+
 This program is provided under
 
     SPDX-License-Identifier: GPL-3.0-only
 
-That is, under the terms of the GNU General Public License version 3 only,
-provided in
-
-    LICENSE
+The full text is available in LICENSE.

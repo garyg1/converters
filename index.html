@@ -1,0 +1,430 @@
+<!--
+    Useful format converters.
+    Copyright (C) 2026 Gary Gurlaskie
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, version 3.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Converters</title>
+
+    <style>
+      div {
+        max-width: 650px;
+        margin: 0 auto;
+      }
+      div#main {
+        min-height: calc(100vh - 60px);
+      }
+      a {
+        color: unset;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Oxygen,
+          Ubuntu,
+          Cantarell,
+          "Open Sans",
+          "Helvetica Neue",
+          sans-serif;
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 400;
+      }
+      textarea {
+        width: 650px;
+        height: 300px;
+        resize: none;
+      }
+
+      #output-error {
+        font-size: 0.9em;
+        color: #a11f1f;
+      }
+
+      #output-info {
+        font-size: 0.9em;
+        color: #595959;
+      }
+
+      small {
+        color: #2c2c2c;
+      }
+
+      .small {
+        font-size: 0.8em;
+      }
+      #title {
+        margin-top: 6px;
+        margin-bottom: 2px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+        }
+        small,
+        #output-info {
+          color: #a9a9a9;
+        }
+        #output-error {
+          color: #cf8b8b;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="main">
+      <div>
+        <a id="back" class="small" href="#"></a>
+      </div>
+      <div>
+        <p id="title"></p>
+      </div>
+      <div id="converter-list"></div>
+      <div id="container"></div>
+    </div>
+
+    <div id="footer">
+      <small><a href="https://github.com/garyg1/converters">Source</a></small>
+    </div>
+
+    <script src="json-formatter-converter.js"></script>
+    <script src="hugging-face-url-converter.js"></script>
+    <script>
+      const converters = [jsonFormatterConverter, huggingFaceUrlConverter];
+      let activeConverter = null;
+      const container = document.getElementById("container");
+      const converterList = document.getElementById("converter-list");
+
+      let argElements = {};
+
+      function camelCaseToSentence(camel) {
+        return camel
+          .split(/([A-Z])/)
+          .filter((e) => e.length > 0)
+          .reduce((acc, elt) => {
+            if (acc.length === 0) {
+              acc.push(elt.substring(0, 1).toUpperCase() + elt.substring(1));
+            } else if (
+              elt.length === 1 &&
+              (elt.charCodeAt(0) < 97 || elt.charCodeAt(0) > 122)
+            ) {
+              acc.push(" ");
+              acc.push(elt);
+            } else {
+              acc.push(elt);
+            }
+            return acc;
+          }, [])
+          .join("");
+      }
+
+      function sentenceCaseToKebab(sentence) {
+        return sentence.split(/ +/).join("-");
+      }
+
+      function getLocalStorageKey(converterName, argName) {
+        return `${converterName}/${argName}`;
+      }
+
+      function getLocalStorageItemSafe(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (e) {
+          console.warn("Excepting when accessing local storage", e);
+          return null;
+        }
+      }
+
+      function attemptSetLocalStorageItemSafe(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch (e) {
+          console.warn("Excepting when accessing local storage", e);
+        }
+      }
+
+      function resetConverter(converter) {
+        for (const arg of converter.args) {
+          try {
+            window.localStorage.removeItem(
+              getLocalStorageKey(converter.name, arg.name),
+            );
+          } catch (e) {
+            console.warn("failed to write to local storage", e);
+          }
+        }
+        initialRenderConverter(converter);
+      }
+
+      function clear() {
+        while (container.lastChild) container.removeChild(container.lastChild);
+        while (converterList.lastChild)
+          converterList.removeChild(converterList.lastChild);
+      }
+
+      function initialRenderConverter(converter) {
+        clear();
+        argElements = {};
+
+        const args = converter.args;
+        const resetLink = container
+          .appendChild(document.createElement("small"))
+          .appendChild(document.createElement("a"));
+        resetLink.parentElement.id = "reset-button";
+        resetLink.innerText = "(reset local storage)";
+        resetLink.style.userSelect = "none";
+        resetLink.style.cursor = "pointer";
+        resetLink.onclick = () => resetConverter(converter);
+        for (const arg of args) {
+          const p = container.appendChild(document.createElement("p"));
+          if (arg.type === "textarea") {
+            const textArea = p.appendChild(document.createElement("textarea"));
+            textArea.spellcheck = false;
+            argElements[arg.name] = textArea;
+          } else {
+            const span = p.appendChild(document.createElement("span"));
+            span.innerText = `${camelCaseToSentence(arg.name)}${arg.name.endsWith("?") ? "" : ": "}`;
+
+            p.appendChild(document.createElement("br"));
+
+            if (arg.type === "integer") {
+              const input = p.appendChild(document.createElement("input"));
+              input.type = "number";
+
+              argElements[arg.name] = input;
+            } else if (arg.type === "string") {
+              const input = p.appendChild(document.createElement("input"));
+              input.type = "text";
+
+              argElements[arg.name] = input;
+            } else if (arg.type === "select") {
+              const select = p.appendChild(document.createElement("select"));
+              const options = arg.options.map((name) => {
+                const option = select.appendChild(
+                  document.createElement("option"),
+                );
+                option.value = name;
+                option.innerText = name;
+                return option;
+              });
+
+              argElements[arg.name] = select;
+            } else {
+              throw new Error(
+                `Unknown argument type for '${arg.name}' (${arg.type})`,
+              );
+            }
+          }
+        }
+
+        {
+          const p = container.appendChild(document.createElement("p"));
+          p.appendChild(document.createElement("span")).innerText = "Output:";
+          p.appendChild(document.createElement("br"));
+          p.appendChild(document.createElement("span")).id = "output-error";
+          p.appendChild(document.createElement("span")).id = "output-info";
+
+          const outputTextArea = container
+            .appendChild(document.createElement("pre"))
+            .appendChild(document.createElement("textarea"));
+          outputTextArea.id = "output-textarea";
+          outputTextArea.readOnly = true;
+
+          outputTextArea.innerHTML = getLocalStorageItemSafe(
+            getLocalStorageKey(converter.name, "$output"),
+          );
+        }
+
+        for (const arg of args) {
+          argElements[arg.name].value =
+            getLocalStorageItemSafe(
+              getLocalStorageKey(converter.name, arg.name),
+            ) || arg.default;
+          argElements[arg.name].onchange = rerenderConverter;
+        }
+
+        activeConverter = converter;
+
+        document.title = converter.name;
+        document.getElementById("back").innerHTML = "&larr; All Converters";
+        document.getElementById("title").innerText = converter.name;
+
+        rerenderConverter();
+      }
+
+      function getParseFn(arg) {
+        if (arg.parseFn) {
+          return arg.parseFn;
+        }
+        if (arg.type === "textarea") {
+          return (e) => ({ success: true, value: e });
+        }
+        if (arg.type === "integer") {
+          return (e) => ({ success: true, value: parseInt(e) });
+        }
+        if (arg.type === "string" || arg.type === "select") {
+          return (e) => ({ success: true, value: e });
+        }
+      }
+
+      function rerenderConverter() {
+        const outputInfo = document.getElementById("output-info");
+        const outputError = document.getElementById("output-error");
+        const outputElement = document.getElementById("output-textarea");
+        const resetButton = document.getElementById("reset-button");
+
+        const argValues = {};
+        const infos = [];
+        const errors = [];
+        const consoleErrors = [];
+        let globalSuccess = true;
+        let anyNonDefault = false;
+
+        function processResult({ value, success, info, error, consoleError }) {
+          if (!success) {
+            globalSuccess = false;
+          }
+          if (info) {
+            infos.push(info);
+          }
+          if (error) {
+            errors.push(error);
+          }
+          if (consoleError) {
+            consoleErrors.push(consoleError);
+          }
+          return value;
+        }
+
+        for (const arg of activeConverter.args) {
+          const element = argElements[arg.name];
+          const parseFn = getParseFn(arg);
+          const argInput = element.value;
+
+          const argResult = parseFn(argInput);
+          argValues[arg.name] = processResult(argResult);
+
+          const localStorageKey = getLocalStorageKey(
+            activeConverter.name,
+            arg.name,
+          );
+          if (argInput === arg.default) {
+            window.localStorage.removeItem(localStorageKey);
+          } else {
+            anyNonDefault = true;
+            attemptSetLocalStorageItemSafe(localStorageKey, argInput);
+          }
+        }
+
+        let converterResult;
+        try {
+          converterResult = activeConverter.converterFn(argValues);
+        } catch (err) {
+          globalSuccess = false;
+          converterResult = {
+            success: false,
+            error: `Unknown when converting: '${err.message.slice(0, 200)}', (would you mind reporting this?)`,
+            consoleErrors: [err],
+          };
+        }
+        const outputValue = processResult(converterResult);
+
+        if (globalSuccess) {
+          outputElement.innerHTML = outputValue;
+          outputInfo.innerText =
+            infos.length > 0 ? `(${infos.join(", ")})` : "";
+          outputError.innerText = "";
+
+          const localStorageKey = getLocalStorageKey(
+            activeConverter.name,
+            "$output",
+          );
+          if (anyNonDefault) {
+            attemptSetLocalStorageItemSafe(localStorageKey, outputValue);
+          } else {
+            window.localStorage.removeItem(localStorageKey);
+          }
+        } else {
+          outputInfo.innerText =
+            infos.length > 0
+              ? `(${infos.join(", ")}, showing cached result)`
+              : "";
+          outputError.innerText =
+            errors.length > 0
+              ? `(${errors.join(", ")}, showing cached result)`
+              : "";
+        }
+        if (consoleErrors) {
+          for (const consoleError of consoleErrors) {
+            console.warn(...consoleError);
+          }
+        }
+
+        resetButton.style.visibility = anyNonDefault ? "visible" : "hidden";
+      }
+
+      function renderConverterList() {
+        clear();
+
+        for (const converter of converters) {
+          const a = converterList.appendChild(document.createElement("a"));
+          a.classList.add("small");
+          const p = a.appendChild(document.createElement("p"));
+          p.innerText = converter.name;
+          a.href = `${window.location.pathname}#${sentenceCaseToKebab(converter.name)}`;
+        }
+
+        document.title = "Converters";
+        document.getElementById("title").innerText = "Converters";
+        document.getElementById("back").innerText = "";
+      }
+
+      function findMatchingConverter() {
+        const hash = window.location.hash;
+        const match = converters.find(
+          (it) => sentenceCaseToKebab(it.name) === hash.substring(1),
+        );
+        if (match) {
+          initialRenderConverter(match);
+        } else {
+          renderConverterList();
+        }
+      }
+
+      window.onhashchange = () => {
+        findMatchingConverter();
+      };
+
+      window.onload = () => {
+        findMatchingConverter();
+      };
+    </script>
+  </body>
+</html>

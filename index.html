@@ -27,16 +27,20 @@
         max-width: 650px;
         margin: 0 auto;
       }
+
       div#main {
         min-height: calc(100vh - 60px);
       }
+
       a {
         color: unset;
         text-decoration: none;
       }
+
       a:hover {
         text-decoration: underline;
       }
+
       body {
         font-family:
           system-ui,
@@ -51,10 +55,12 @@
           "Helvetica Neue",
           sans-serif;
       }
+
       h1 {
         font-size: 1.5rem;
         font-weight: 400;
       }
+
       textarea {
         width: 650px;
         height: 300px;
@@ -78,6 +84,7 @@
       .small {
         font-size: 0.8em;
       }
+
       #title {
         margin-top: 6px;
         margin-bottom: 2px;
@@ -87,10 +94,12 @@
         :root {
           color-scheme: dark;
         }
+
         small,
         #output-info {
           color: #a9a9a9;
         }
+
         #output-error {
           color: #cf8b8b;
         }
@@ -106,18 +115,31 @@
       <div>
         <p id="title"></p>
       </div>
-      <div id="converter-list"></div>
+      <div id="converter-list">
+        <a class="small" href="/#JSON-Formatter"><p>JSON Formatter</p></a
+        ><a class="small" href="/#Hugging-Face-URL-to-hf-cmd"
+          ><p>Hugging Face URL to hf cmd</p></a
+        ><a class="small" href="/#HTML-table-to-JSON-with-link-extraction"
+          ><p>HTML table to JSON with link extraction</p></a
+        >
+      </div>
       <div id="container"></div>
     </div>
 
     <div id="footer">
-      <small><a href="https://github.com/garyg1/converters">Source</a></small>
+      <small><a href="https://github.com/garyg1/converters">Source</a></small> &nbsp;
+      <small><a href="/converters/LICENSE">License</a></small>
     </div>
 
     <script src="json-formatter-converter.js"></script>
     <script src="hugging-face-url-converter.js"></script>
+    <script src="html-to-json-converter.js"></script>
     <script>
-      const converters = [jsonFormatterConverter, huggingFaceUrlConverter];
+      const converters = [
+        jsonFormatterConverter,
+        huggingFaceUrlConverter,
+        htmlToJsonConverter,
+      ];
       let activeConverter = null;
       const container = document.getElementById("container");
       const converterList = document.getElementById("converter-list");
@@ -272,9 +294,9 @@
 
         activeConverter = converter;
 
-        document.title = converter.name;
+        document.title = converter.longName;
         document.getElementById("back").innerHTML = "&larr; All Converters";
-        document.getElementById("title").innerText = converter.name;
+        document.getElementById("title").innerText = converter.longName;
 
         rerenderConverter();
       }
@@ -350,7 +372,7 @@
           globalSuccess = false;
           converterResult = {
             success: false,
-            error: `Unknown when converting: '${err.message.slice(0, 200)}', (would you mind reporting this?)`,
+            error: `Unknown when converting: '${err.message.slice(0, 200)}', (would you mind reporting this to garygurlaskie.public@gmail.com?)`,
             consoleErrors: [err],
           };
         }
@@ -397,7 +419,7 @@
           const a = converterList.appendChild(document.createElement("a"));
           a.classList.add("small");
           const p = a.appendChild(document.createElement("p"));
-          p.innerText = converter.name;
+          p.innerText = converter.longName;
           a.href = `${window.location.pathname}#${sentenceCaseToKebab(converter.name)}`;
         }
 

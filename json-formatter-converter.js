@@ -1,5 +1,5 @@
 /*
-Useful format converters.
+Converters
 Copyright (C) 2026 Gary Gurlaskie
 
 This program is free software: you can redistribute it and/or modify
@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
 
 /**
  * JSON formatter that captures a mapping from the formatted string to the input object.
@@ -267,101 +268,106 @@ function prettifyJson(object, indent, lineLength) {
   return prettifyJsonWithContext(object, indent, lineLength).json;
 }
 
-function test() {
-  for (let i = 60; i >= 10; i -= 1) {
-    console.log("-".repeat(i));
-    console.log(prettifyJson([1, 2, 3, [4, 5, [6, 7, 8]], "9"], 4, i));
-  }
-
-  for (let i = 100; i >= 10; i -= 2) {
-    console.log("-".repeat(i));
-    const result = prettifyJson(
-      {
-        "the quick brown fox": {
-          jumps: "over",
-          "the lazy": ["d", "o", "g"],
-        },
-      },
-      4,
-      i,
-    );
-    try {
-      JSON.parse(result);
-    } catch (e) {
-      console.error("Invalid JSON", e);
-      throw e;
+const jsonFormatterConverter = (() => {
+  function test() {
+    for (let i = 60; i >= 10; i -= 1) {
+      console.log("-".repeat(i));
+      console.log(prettifyJson([1, 2, 3, [4, 5, [6, 7, 8]], "9"], 4, i));
     }
-    console.log(result);
+
+    for (let i = 100; i >= 10; i -= 2) {
+      console.log("-".repeat(i));
+      const result = prettifyJson(
+        {
+          "the quick brown fox": {
+            jumps: "over",
+            "the lazy": ["d", "o", "g"],
+          },
+        },
+        4,
+        i,
+      );
+      try {
+        JSON.parse(result);
+      } catch (e) {
+        console.error("Invalid JSON", e);
+        throw e;
+      }
+      console.log(result);
+    }
   }
-}
 
-const jsonFormatterConverter = {
-  name: "JSON Formatter",
-  args: [
-    {
-      name: "json",
-      type: "textarea",
-      default:
-        '{"the quick brown fox":{"jumps over":{"the lazy":["d","o","g"],"the sleeping":["c","a","t"]},"sneaks under":{"the tall":["g","i","r","a","f","f","e"]}}}',
-      parseFn: (value) => {
-        const exceptions = {};
-        try {
-          const obj = JSON.parse(value);
-          return { success: true, value: obj };
-        } catch (e) {
-          exceptions["json"] = e;
-        }
+  const converter = {
+    name: "JSON Formatter",
+    longName: "space-optimal JSON formatter",
+    args: [
+      {
+        name: "json",
+        type: "textarea",
+        default:
+          '{"the quick brown fox":{"jumps over":{"the lazy":["d","o","g"],"the sleeping":["c","a","t"]},"sneaks under":{"the tall":["g","i","r","a","f","f","e"]}}}',
+        parseFn: (value) => {
+          const exceptions = {};
+          try {
+            const obj = JSON.parse(value);
+            return { success: true, value: obj };
+          } catch (e) {
+            exceptions["json"] = e;
+          }
 
-        try {
-          const objs = value
-            .split("\n")
-            .map((s) => s.trim())
-            .filter((s) => s)
-            .map((s) => JSON.parse(s));
+          try {
+            const objs = value
+              .split("\n")
+              .map((s) => s.trim())
+              .filter((s) => s)
+              .map((s) => JSON.parse(s));
 
-          if (objs.length === 0) {
+            if (objs.length === 0) {
+              return {
+                success: false,
+                value: null,
+                info: "no input",
+              };
+            }
+
             return {
-              success: false,
-              value: null,
-              info: "no input",
+              success: true,
+              value: objs,
+              info: "from JSON Lines",
             };
+          } catch (e) {
+            exceptions["json-lines"] = e;
           }
 
           return {
-            success: true,
-            value: objs,
-            info: "from JSON Lines",
+            value: null,
+            success: false,
+            error: "invalid JSON and JSON-lines",
+            consoleError: [
+              "Failed to parse " + Object.keys(exceptions),
+              exceptions,
+            ],
           };
-        } catch (e) {
-          exceptions["json-lines"] = e;
-        }
-
-        return {
-          value: null,
-          success: false,
-          error: "invalid JSON and JSON-lines",
-          consoleError: [
-            "Failed to parse " + Object.keys(exceptions),
-            exceptions,
-          ],
-        };
+        },
       },
+      {
+        name: "indent",
+        type: "integer",
+        default: "4",
+      },
+      {
+        name: "lineLength",
+        type: "integer",
+        default: "80",
+      },
+    ],
+    converterFn: (obj) => {
+      return {
+        success: true,
+        value: prettifyJson(obj.json, obj.indent, obj.lineLength),
+      };
     },
-    {
-      name: "indent",
-      type: "integer",
-      default: "4",
-    },
-    {
-      name: "lineLength",
-      type: "integer",
-      default: "80",
-    },
-  ],
-  converterFn: (obj) => {
-    return {
-      success: true,
-      value: prettifyJson(obj.json, obj.indent, obj.lineLength),
-    };
-  },
-};
+  };
+
+  return converter;
+})();

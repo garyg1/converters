@@ -15,7 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 /**
  * JSON formatter that captures a mapping from the formatted string to the input object.
  * @param {any} object
@@ -299,7 +298,7 @@ const jsonFormatterConverter = (() => {
 
   const converter = {
     name: "JSON Formatter",
-    longName: "space-optimal JSON formatter",
+    longName: "space-optimal JSON format",
     args: [
       {
         name: "json",

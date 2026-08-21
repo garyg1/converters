@@ -344,7 +344,7 @@ const huggingFaceUrlConverter = (() => {
 
   const converter = {
     name: "hf",
-    longName: "'hf download' command converter",
+    longName: "'hf download' command maker",
     args: [
       {
         name: "huggingFaceUrls",

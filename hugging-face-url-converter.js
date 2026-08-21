@@ -53,14 +53,15 @@ function tryParseUrls(input) {
       const pathParts = url.pathname.split("/").filter(Boolean) ?? [];
       if (
         /huggingface.com?/i.test(url.hostname) &&
-        ["blob", "resolve"].some((it) => url.pathname.includes(it))
+        ["blob", "resolve", "tree"].some((it) => url.pathname.includes(it))
       ) {
-        // huggingface.co/<owner>/<model>/blob|resolve/<branch>/<filePath...>
+        // huggingface.co/<owner>/<model>/blob|resolve|tree/<branch>/<filePath...>
         ownerName = pathParts[0] ?? null;
         modelName = pathParts[1] ?? null;
         const i = [
           pathParts.indexOf("blob"),
           pathParts.indexOf("resolve"),
+          pathParts.indexOf("tree"),
         ].filter((it) => it >= 0)[0];
         branchName = pathParts[i + 1] || null;
         filePath = pathParts.slice(i + 2).join("/") || null;
@@ -254,6 +255,8 @@ function test_parseUrls() {
       inputs: [
         `
         https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/blob/main/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf
+        https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/tree/main/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf
+        https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf
         hf download hf://unsloth/gemma-4-26B-A4B-it-GGUF/MTP/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf
         hf download hf://unsloth/gemma-4-26B-A4B-it-GGUF/MTP/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf
         hf download hf://unsloth/gemma-4-31B-it-GGUF/MTP/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf
@@ -346,8 +349,10 @@ const huggingFaceUrlConverter = {
     {
       name: "huggingFaceUrls",
       type: "textarea",
-      default: `You can type things like
+      default: `The supported formats include
 https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/blob/main/gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf
+
+https://huggingface.co/unsloth/DeepSeek-V4-Flash-0731-GGUF/tree/main/UD-IQ2_M/DeepSeek-V4-Flash-0731-UD-IQ2_M-00001-of-00003.gguf
 
 or unsloth/gemma-4-26B-A4B-it-GGUF
 

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 let debug1;
 
 const htmlToJsonConverter = (() => {
+  let opts = { firstRowHeader: false, ignoreColspan: false };
   function tryParseHtml(html) {
     try {
       return { doc: new DOMParser().parseFromString(html, "text/html") };
@@ -67,17 +68,25 @@ const htmlToJsonConverter = (() => {
 
   /**
    *
-   * @param {HTMLTableRowElement} td
+   * @param {HTMLTableRowElement} tr
    * @param {string[]} cols
    */
   function parseRow(tr, cols) {
     const result = {};
     let idx = 0;
-    for (const td of tr.querySelectorAll("td")) {
+    for (const td of [
+      ...tr.querySelectorAll("td"),
+      ...tr.querySelectorAll('div[role="cell"]'),
+    ]) {
+      console.log(td, opts, td.colSpan, td.ariaColSpan);
+      if (opts.ignoreColspan && td.colSpan) {
+        continue;
+      }
       const { text, hrefs } = parseTextTd(td);
-      result[cols[idx]] = text;
+      const colName = cols[idx] || idx;
+      result[colName] = text;
       if (hrefs.length > 0) {
-        result[cols[idx] + "_href"] = hrefs;
+        result[colName + "_href"] = hrefs;
       }
 
       idx++;
@@ -126,8 +135,11 @@ const htmlToJsonConverter = (() => {
         cols = parseCols(heads[0]);
       }
 
-      const trs = tableElt.querySelectorAll("tr");
-      if (heads.length === 0) {
+      let trs = [
+        ...tableElt.querySelectorAll("tr"),
+        ...tableElt.querySelectorAll('div[role="row"]'),
+      ];
+      if (heads.length === 0 && opts.firstRowHeader) {
         cols = parseCols(trs[0]);
         trs = trs.slice(1);
       }
@@ -192,9 +204,25 @@ const htmlToJsonConverter = (() => {
           };
         },
       },
+      {
+        name: "firstRowHeader?",
+        type: "select",
+        options: ["Yes", "No"],
+        default: "Yes",
+      },
+      {
+        name: "ignoreColspan?",
+        type: "select",
+        options: ["Yes", "No"],
+        default: "Yes",
+      },
     ],
     converterFn: (obj) => {
       let html = obj.html;
+      opts = {
+        firstRowHeader: obj["firstRowHeader?"] === "Yes",
+        ignoreColspan: obj["ignoreColspan?"] === "Yes",
+      };
       const json = convert(html);
       return {
         success: true,

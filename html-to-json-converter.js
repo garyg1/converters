@@ -78,8 +78,7 @@ const htmlToJsonConverter = (() => {
       ...tr.querySelectorAll("td"),
       ...tr.querySelectorAll('div[role="cell"]'),
     ]) {
-      console.log(td, opts, td.colSpan, td.ariaColSpan);
-      if (opts.ignoreColspan && td.colSpan) {
+      if (opts.ignoreColspan && td.getAttribute('colspan')) {
         continue;
       }
       const { text, hrefs } = parseTextTd(td);
@@ -205,23 +204,23 @@ const htmlToJsonConverter = (() => {
         },
       },
       {
-        name: "firstRowHeader?",
+        name: "firstRowHeaderIfNoneDeclared?",
         type: "select",
         options: ["Yes", "No"],
-        default: "Yes",
+        default: "No",
       },
       {
-        name: "ignoreColspan?",
+        name: "ignoreElementsWithColspan?",
         type: "select",
         options: ["Yes", "No"],
-        default: "Yes",
+        default: "No",
       },
     ],
     converterFn: (obj) => {
       let html = obj.html;
       opts = {
-        firstRowHeader: obj["firstRowHeader?"] === "Yes",
-        ignoreColspan: obj["ignoreColspan?"] === "Yes",
+        firstRowHeader: obj["firstRowHeaderIfNoneDeclared?"] === "Yes",
+        ignoreColspan: obj["ignoreElementsWithColspan?"] === "Yes",
       };
       const json = convert(html);
       return {
